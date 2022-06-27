@@ -4923,7 +4923,7 @@ gregtech.terminal.app_name.fluid_prospector=Fluid Prospector
 gregtech.terminal.app_name.pong=Pong
 gregtech.terminal.app_name.minesweeper=Minesweeper
 gregtech.terminal.app_name.maze=Theseus's Escape
-
+gregtech.terminal.app_name.configurator=Configurator
 
 gregtech.terminal.app_name.console=GT Console
 gregtech.terminal.app_name.battery=Battery Manager
@@ -4948,7 +4948,7 @@ terminal.pong.description=A classic pong game, if you're really that bored of wa
 terminal.minesweeper.description=A classic minesweeper game, if you're in class.
 terminal.maze.description=A GTOS exclusive game finding you racing through an endless labyrinth to survive the Minotaur!
 terminal.cape_selector.description=An app that allows you to equip GT capes that you've unlocked through advancements.
-
+terminal.configurator.description=An app that allows the swift configuration of machines.
 
 texture.modify_gui_texture.missing=Missing Texture
 texture.url_texture.fail=Load Failed
@@ -5135,6 +5135,9 @@ terminal.minesweeper.win.2=Game will restart in %s
 terminal.cape_selector.empty=It looks like you haven't unlocked any capes yet!
 terminal.cape_selector.select=Click on an unlocked cape to select it!
 terminal.cape_selector.tip=You can get these from high-level advancements.
+
+terminal.configurator.hovertext=Hover Text
+terminal.configurator.labletext=Lable Text
 
 metaitem.cover.digital.title.mode=Mode:
 metaitem.cover.digital.title.spin=Spin:
