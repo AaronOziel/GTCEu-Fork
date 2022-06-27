@@ -5,11 +5,15 @@ import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.SimpleMachineMetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.terminal.app.AbstractApplication;
+import gregtech.common.covers.CoverPump;
+import gregtech.common.covers.filter.SimpleFluidFilter;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.EnumFacing;
 import net.minecraft.util.math.BlockPos;
+
+import java.util.List;
 
 public class ConfiguratorApp extends AbstractApplication {
     public static final String APP_NAME = "configurator";
@@ -57,7 +61,7 @@ public class ConfiguratorApp extends AbstractApplication {
 
         // Simple Machine Tile Entity
         if (templateEntity instanceof SimpleMachineMetaTileEntity && existingTileEntity instanceof SimpleMachineMetaTileEntity) {
-            SimpleMachineMetaTileEntity templateSMTE= (SimpleMachineMetaTileEntity)templateEntity;
+            SimpleMachineMetaTileEntity templateSMTE = (SimpleMachineMetaTileEntity)templateEntity;
             SimpleMachineMetaTileEntity existingSMTE = (SimpleMachineMetaTileEntity)existingTileEntity;
             existingSMTE.setOutputFacingItems(templateSMTE.getOutputFacingItems());
             existingSMTE.setOutputFacingFluids(templateSMTE.getOutputFacingFluids());
@@ -73,14 +77,47 @@ public class ConfiguratorApp extends AbstractApplication {
                 // Retrieve cover and cover's ItemStack
                 CoverBehavior cover = templateEntity.getCoverAtSide(side);
                 ItemStack coverItemStack = cover.getPickItem();
+                // Check if player inventory contains valid cover
+                if (!RemoveItemFromInventorySuccessful(gui.entityPlayer.inventory.mainInventory, coverItemStack)) {
+                    continue;
+                }
                 if (existingTileEntity.getCoverAtSide(side) != null) {
                     existingTileEntity.removeCover(side);
                 }
                 existingTileEntity.placeCoverOnSide(side, coverItemStack, cover.getCoverDefinition(), gui.entityPlayer);
+                applyCoverSettings(cover, existingTileEntity.getCoverAtSide(side));
             }
         }
-
         existingTileEntity.scheduleRenderUpdate();
+    }
+
+    private void applyCoverSettings(CoverBehavior templateCover, CoverBehavior newCover) {
+        if (templateCover instanceof CoverPump) {
+            CoverPump templatePump = (CoverPump) templateCover;
+            CoverPump newPump = (CoverPump) newCover;
+            // Transfer Settings
+            newPump.setPumpMode(templatePump.getPumpMode());
+            newPump.setBucketMode(templatePump.getBucketMode());
+            newPump.setTransferRate(templatePump.getTransferRate());
+            newPump.setWorkingEnabled(templatePump.isWorkingEnabled());
+            // Transfer Filter
+            ItemStack filter = templatePump.getFluidFilterContainer().getFilterInventory().getStackInSlot(0);
+            if (!filter.isEmpty() && RemoveItemFromInventorySuccessful(gui.entityPlayer.inventory.mainInventory, filter)) {
+                newPump.getFluidFilterContainer().getFilterInventory().setStackInSlot(0, templatePump.getFluidFilterContainer().getFilterInventory().getStackInSlot(0));
+                newPump.getFluidFilterContainer().getFilterWrapper().setFluidFilter(templatePump.getFluidFilterContainer().getFilterWrapper().getFluidFilter());
+                newPump.getFluidFilterContainer().getFilterWrapper().setBlacklistFilter(templatePump.getFluidFilterContainer().getFilterWrapper().isBlacklistFilter());
+            }
+        }
+    }
+
+    private boolean RemoveItemFromInventorySuccessful(List<ItemStack> inventory, ItemStack coverItemStack) {
+        for (ItemStack playerStack : inventory) {
+            if (playerStack.isItemEqual(coverItemStack) && !playerStack.isEmpty()) {
+                playerStack.setCount(playerStack.getCount() - 1);
+                return true;
+            }
+        }
+        return false;
     }
 
     private void writeNBT(MetaTileEntity entity) {
