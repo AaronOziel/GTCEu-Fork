@@ -266,4 +266,8 @@ public class CoverEnderFluidLink extends CoverBehavior implements CoverWithUI, I
         this.isPrivate = isPrivate;
         updateTankLink();
     }
+
+    public FluidFilterContainer getFluidFilterContainer() {
+        return fluidFilter;
+    }
 }
