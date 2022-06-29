@@ -5,7 +5,11 @@ import gregtech.api.metatileentity.MetaTileEntity;
 import gregtech.api.metatileentity.SimpleMachineMetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.terminal.app.AbstractApplication;
-import gregtech.common.covers.*;
+import gregtech.common.covers.CoverConveyor;
+import gregtech.common.covers.CoverCraftingTable;
+import gregtech.common.covers.CoverEnderFluidLink;
+import gregtech.common.covers.CoverMachineController;
+import gregtech.common.covers.CoverPump;
 import gregtech.common.metatileentities.storage.MetaTileEntityQuantumChest;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
@@ -44,7 +48,6 @@ public class ConfiguratorApp extends AbstractApplication {
             // 3. Open the app to create a configuration
             LaunchApp();
         }
-
         return this;
     }
 
@@ -237,7 +240,7 @@ public class ConfiguratorApp extends AbstractApplication {
 
     private void LaunchApp() {
         if (isClient) {
-            //this.addWidget(new ConfigMenuWidget(323, 212));
+            // No UI For Now
         } else {
             writeNBT(null);
         }
