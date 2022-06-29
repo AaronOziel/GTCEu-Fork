@@ -6,6 +6,7 @@ import gregtech.api.metatileentity.SimpleMachineMetaTileEntity;
 import gregtech.api.metatileentity.interfaces.IGregTechTileEntity;
 import gregtech.api.terminal.app.AbstractApplication;
 import gregtech.common.covers.*;
+import gregtech.common.metatileentities.storage.MetaTileEntityQuantumChest;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
@@ -16,6 +17,7 @@ import net.minecraftforge.fluids.capability.CapabilityFluidHandler;
 import net.minecraftforge.items.CapabilityItemHandler;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 
 public class ConfiguratorApp extends AbstractApplication {
@@ -51,74 +53,47 @@ public class ConfiguratorApp extends AbstractApplication {
             entity.scheduleRenderUpdate();
             return;
         }
+        // Make a copy of the existing entity to overwrite with the template
         MetaTileEntity templateEntity = entity.createMetaTileEntity(entity.getHolder());
         templateEntity.readFromNBT(os.tabletNBT.getCompoundTag(APP_NBT_TAG));
+        // Apply the template
         applyMachineConfiguration(templateEntity, entity);
     }
 
-    private void applyMachineConfiguration(MetaTileEntity templateEntity, MetaTileEntity existingTileEntity) {
+    private void applyMachineConfiguration(MetaTileEntity templateTileEntity, MetaTileEntity existingTileEntity) {
         // Meta Tile Entity
-        existingTileEntity.setFrontFacing(templateEntity.getFrontFacing());
-        if (existingTileEntity.isMuffled() != templateEntity.isMuffled())
+        existingTileEntity.setFrontFacing(templateTileEntity.getFrontFacing());
+        if (existingTileEntity.isMuffled() != templateTileEntity.isMuffled())
             existingTileEntity.toggleMuffled();
 
         // Simple Machine Tile Entity
-        if (templateEntity instanceof SimpleMachineMetaTileEntity && existingTileEntity instanceof SimpleMachineMetaTileEntity) {
-            SimpleMachineMetaTileEntity templateSMTE = (SimpleMachineMetaTileEntity)templateEntity;
+        if (templateTileEntity instanceof SimpleMachineMetaTileEntity && existingTileEntity instanceof SimpleMachineMetaTileEntity) {
+            SimpleMachineMetaTileEntity templateSMTE = (SimpleMachineMetaTileEntity)templateTileEntity;
             SimpleMachineMetaTileEntity existingSMTE = (SimpleMachineMetaTileEntity)existingTileEntity;
-
+            // Check for item capabilities
             if (existingSMTE.getCapability(CapabilityItemHandler.ITEM_HANDLER_CAPABILITY, EnumFacing.VALUES[0]) != null) {
                 existingSMTE.setOutputFacingItems(templateSMTE.getOutputFacingItems());
                 existingSMTE.setAutoOutputItems(templateSMTE.isAutoOutputItems());
                 existingSMTE.setAllowInputFromOutputSideItems(templateSMTE.isAllowInputFromOutputSideItems());
             }
-
+            // Check for fluid capabilities
             if (existingSMTE.getCapability(CapabilityFluidHandler.FLUID_HANDLER_CAPABILITY, EnumFacing.VALUES[0]) != null) {
                 existingSMTE.setOutputFacingFluids(templateSMTE.getOutputFacingFluids());
                 existingSMTE.setAutoOutputFluids(templateSMTE.isAutoOutputFluids());
                 existingSMTE.setAllowInputFromOutputSideFluids(templateSMTE.isAllowInputFromOutputSideFluids());
             }
         }
-
-        /* FUTURE ENTITIES TO COPY/PASTE
-        // buffer
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
+        // Everything else
+        else {
+            copyMetaTileEntity(templateTileEntity,existingTileEntity);
         }
-        // creative energy
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
-        }
-        // creative tank
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
-        }
-        // drum
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
-        }
-        // quantum chest
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
-        }
-        // quantum tank
-        else if (templateEntity instanceof INSTANCE && existingTileEntity instanceof INSTANCE) {
-            INSTANCE templateINSTANCE = (INSTANCE)templateEntity;
-            INSTANCE existingIMSTANCE = (INSTANCE)existingTileEntity;
-        }
-        */
 
         // Covers
         ArrayList<CoverMachineController> ControlCovers = new ArrayList<>();
         for (EnumFacing side : EnumFacing.VALUES) {
-            if (templateEntity.getCoverAtSide(side) != null) {
+            if (templateTileEntity.getCoverAtSide(side) != null) {
                 // Retrieve cover and cover's ItemStack
-                CoverBehavior templateCover = templateEntity.getCoverAtSide(side);
+                CoverBehavior templateCover = templateTileEntity.getCoverAtSide(side);
                 ItemStack templateCoverItemStack = templateCover.getPickItem();
 
                 // Check if player inventory contains valid cover or existing cover is the same as template cover
@@ -169,7 +144,36 @@ public class ConfiguratorApp extends AbstractApplication {
             }
         }
 
+        // Try everything under the sun to get the damn block to update visually
+        existingTileEntity.notifyBlockUpdate();
+        existingTileEntity.markDirty();
         existingTileEntity.scheduleRenderUpdate();
+    }
+
+    private void copyMetaTileEntity(MetaTileEntity templateTileEntity, MetaTileEntity existingTileEntity) {
+        // Create NBT Tag Compound to paste onto the existing entity
+        NBTTagCompound MTE = new NBTTagCompound();
+        templateTileEntity.clearMachineInventory(NonNullList.create());
+        templateTileEntity.writeToNBT(MTE);
+
+        // Clean out tags that should not be transferred
+        MTE.removeTag("Covers");
+        // All Inventories
+        HashSet<String> keySet = new HashSet<>(MTE.getKeySet());
+        for (String key : keySet) {
+            if (key.toLowerCase().contains("inventory")) {
+                MTE.removeTag(key);
+            }
+        }
+
+        // Special Cases
+        if (templateTileEntity instanceof MetaTileEntityQuantumChest && existingTileEntity instanceof MetaTileEntityQuantumChest) {
+            MTE.removeTag("ItemAmount");
+            MTE.removeTag("ItemStack");
+        }
+
+        // Finally, transfer the sanitized NBT Compound Tag
+        existingTileEntity.readFromNBT(MTE);
     }
 
     private void SubtractFilterIfMissing(CoverBehavior templateCover, CoverBehavior existingCover) {
